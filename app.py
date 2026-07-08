@@ -20,7 +20,18 @@ def home():
 
     html += "<ul>"
     for row in rows:
-        html += f"<li>[{row[0]}] {row[1]} — 완료: {row[2]}</li>"
+        mark = "✅" if row[2] == 1 else "⬜"
+        html += f"""
+            <li>
+                {mark} {row[1]}
+                <form action="/toggle/{row[0]}" method="post" style="display:inline">
+                    <button type="submit">완료</button>
+                </form>
+                <form action="/delete/{row[0]}" method="post" style="display:inline">
+                    <button type="submit">삭제</button>
+                </form>
+            </li>
+        """
     html += "</ul>"
     return html
 
@@ -29,6 +40,22 @@ def add():
     content = request.form["content"]
     conn = sqlite3.connect("todos.db")
     conn.execute("INSERT INTO todos (content) VALUES (?)", (content,))
+    conn.commit()
+    conn.close()
+    return redirect("/")
+
+@app.route("/toggle/<int:todo_id>", methods=["post"])
+def toggle(todo_id):
+    conn = sqlite3.connect("todos.db")
+    conn.execute("UPDATE todos SET done = 1 - done WHERE id = ?", (todo_id,))
+    conn.commit()
+    conn.close()
+    return redirect("/")
+
+@app.route("/delete/<int:todo_id>", methods=["post"])
+def delete(todo_id):
+    conn = sqlite3.connect("todos.db")
+    conn.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
     conn.commit()
     conn.close()
     return redirect("/")

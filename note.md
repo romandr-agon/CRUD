@@ -79,6 +79,65 @@
        ② 보안(실제 데이터는 클라우드에 안 올린다는 원칙)
 - 데이터 보관(DB)과 표현(화면)의 분리 = 앞으로 계속 나올 핵심 감각.
 
-## Step 3 — 나머지 CRUD (예정)
-- done을 사람이 읽는 표시로 (0/1 → ✅/⬜)
-- 할 일 직접 추가(입력창) / 완료 체크(Update) / 삭제(Delete)
+## Step 3 — 나머지 CRUD (완료)
+목표: 사용자가 화면에서 직접 추가(C)·완료체크(U)·삭제(D)할 수 있게 만들기.
+→ 이걸로 CRUD 네 글자 완성: Create(3a), Read(2c), Update(3b), Delete(3c)
+
+### 3a — 할 일 추가 (Create)
+- GET과 POST: 요청의 종류(HTTP 메서드).
+  GET="보여줘"(데이터 가져오기), POST="이 데이터를 받아 처리해"(만들기/바꾸기)
+- form = '형식'이 아니라 '신청서 한 장':
+  - `<form>...</form>` = 신청서 종이(입력칸·버튼을 감싸는 울타리)
+  - `<input name="content">` = 이름표 붙은 빈칸 (이름표로 서버가 값을 구분)
+  - `<button type="submit">` = 제출 도장
+  - `action="/add"` = 제출처, `method="post"` = 제출 방법
+- 서버 접수 창구: `@app.route("/add", methods=["post"])` + `request.form["content"]`
+  → INSERT로 저장 → `redirect("/")`로 목록 화면 복귀
+- 라우트는 절차가 아니라 등록부: 서버 시작 시 "주소+방식→함수" 표가 등록되고,
+  요청마다 맞는 함수 하나만 실행. 요청과 요청을 잇는 건 브라우저(action, redirect).
+- HTTP는 무상태(stateless): 서버는 매 요청을 독립 처리하고 잊는다.
+- 브라우저의 정체: ① 사용자 행동을 HTTP 요청으로 번역·발송하는 통신원
+  ② 받은 HTML/CSS/JS를 해석해 화면으로 그리는 렌더링 엔진.
+  = 프론트엔드 코드의 실행 환경.
+
+### 3b — 완료 체크 (Update)
+- 새 문제: 여러 행 중 특정 행을 지정해야 함 → id가 손잡이 역할
+- URL 변수: `@app.route("/toggle/<int:todo_id>")` — 주소의 일부를 값으로 받음.
+  form의 action에 f-string으로 id를 박아 `/toggle/2`처럼 발송.
+- UPDATE SQL: `UPDATE todos SET done = 1 - done WHERE id = ?`
+  - WHERE가 생명: 빠지면 모든 행이 바뀜 (UPDATE/DELETE 쓸 땐 WHERE부터 확인)
+  - `SET done = 1 - done`: 오른쪽 done은 '현재 값', 왼쪽은 '새로 쓸 자리'.
+    DB가 기존 값을 읽고→계산하고→저장. (파이썬 x = x + 1과 같은 구조)
+    1-0=1, 1-1=0이라 누를 때마다 0↔1 토글.
+- 클릭은 값을 보내는 게 아니라 서버에 새겨진 규칙의 방아쇠를 당기는 것.
+  기존 값은 DB가 기억(DEFAULT 0으로 태어남), 규칙은 코드에, 대상 지정만 요청에.
+- 조건부 표현식: `mark = "✅" if row[2] == 1 else "⬜"`
+  → DB 내부 약속(0/1)을 사람 말로 번역. 번역은 화면 만드는 쪽에서(보관·표현 분리).
+
+### 3c — 삭제 (Delete) + 소프트 삭제
+- 하드 삭제: `DELETE FROM todos WHERE id = ?` — 행을 물리적으로 제거.
+  SET 없음(값 변경이 아니라 행 제거). WHERE 없으면 표 전체 증발 주의.
+- 소프트 삭제(직접 구현함): 행을 없애는 대신 표시만 하는 방식
+  ① 표에 열 추가: `deleted INTEGER NOT NULL DEFAULT 0`
+  ② 삭제 라우트 SQL 교체: `UPDATE todos SET deleted = 1 WHERE id = ?`
+  ③ 목록 SELECT에 필터: `SELECT * FROM todos WHERE deleted = 0`
+  → 화면에선 사라지지만 DB에는 보존. 복구는 `SET deleted = 0` 한 줄.
+  → 의료 데이터처럼 기록 보존이 필요한 곳에서 사용. 단 표가 비대해지고
+    모든 SELECT에 필터를 빼먹으면 안 되는 부담. 진짜 지워야 하는 의무(잊힐 권리)도
+    있으므로 하드/소프트는 요구사항에 따른 설계 선택.
+
+### 그 외 배운 것
+- 표 구조 변경: `CREATE TABLE IF NOT EXISTS`는 기존 표를 안 고침.
+  방법 A) `rm todos.db` 후 재생성(연습용) B) `ALTER TABLE ... ADD COLUMN`(실무, 마이그레이션)
+- SQL 문법: 열 정의 사이엔 쉼표 필수(마지막 항목 뒤에 추가할 때 빼먹기 쉬움)
+- `rm` = 리눅스 파일 삭제 명령. 휴지통 없이 즉시 영구 삭제라 신중히.
+  (파일시스템의 휴지통과 DB의 soft delete는 같은 문제의식의 해법)
+- DB는 서버의 소유물이 아닌 공용 창고: Flask도 sqlite3 터미널 도구도 같은 DB에
+  접근하는 별개의 손님. 관리자 직접 접근은 앱의 규칙을 우회하므로 강력하지만 위험.
+  (실무·의료에선 직접 접근을 통제하고 감사 기록을 남김)
+- AUTOINCREMENT는 번호 재사용 안 함(은행 대기표): id는 순번이 아니라 영구 신분증.
+  재사용하면 지워진 id를 새 행이 물려받아 엉뚱한 행을 조작하는 사고 발생.
+  id에 구멍이 있는 건 정상(뭔가 지워진 흔적).
+
+## Step 4 — 프론트엔드 다듬기 (예정)
+- CSS로 화면 꾸미기 (HTML=뼈대, CSS=옷, JS=움직임)
