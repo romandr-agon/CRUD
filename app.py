@@ -9,7 +9,47 @@ def home():
     rows = conn.execute("SELECT * FROM todos").fetchall()
     conn.close()
 
-    html = "<h1>할 일 목록</h1>"
+    html = """
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 480px;
+            margin: 40px auto;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: white;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+        }
+        form {
+            margin-bottom: 4px;
+        }
+        button {
+            border: none;
+            background: #4a7dff;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            width: 60%;
+        }
+    </style>
+    <h1>할 일 목록</h1>
+    """
 
     html += """
         <form action="/add" method="post">
