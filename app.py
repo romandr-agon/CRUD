@@ -3,6 +3,21 @@ import sqlite3
 
 app = Flask(__name__)
 
+def init_db():
+    conn = sqlite3.connect("todos.db")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS todos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT NOT NULL,
+            done INTEGER NOT NULL DEFAULT 0,
+            deleted INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
 @app.route("/")
 def home():
     conn = sqlite3.connect("todos.db")
